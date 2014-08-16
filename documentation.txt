@@ -1,0 +1,121 @@
+## Grabar so en sd
+
+# Formatear la sd (Gparted) como fat32, grabar a continuación la imagen usando:
+# sudo dd bs=4M if=/ruta-imagen of=/dev/sdc
+
+sudo dd bs=4M if=2014-01-07-wheezy-raspbian.img of=/dev/sdb
+
+# Habilitar SSH sin monitor
+
+ls ruta-raiz-raspberry
+cd etc/rc2.d
+sudo mv K01ssh S01ssh
+
+# Copiar el script raspiLapseCam.py a /home/pi/
+
+# Conectarse a ella por ssh (PuTty) user pi pass raspberry
+# Cambiar la contraseña por defecto
+
+sudo passwd pi
+
+# Utiliza raspi-config para expandir el sistema, configurar la camara y cambiar la contraseña de administrador (rasp)
+
+sudo raspi-config
+
+# Reiniciar cuando te lo pregunte.
+
+# Nos reconectamos por ssh con la nueva contraseña
+
+# Añadimos este script al inicio para que ejecute raspiLapseCam.py al arrancar el sistema
+
+sudo nano /etc/	init.d/timelapse
+
+# Y escribir lo siguiente:
+
+#!/bin/sh
+/usr/bin/python /home/pi/raspiLapseCam.py
+
+# Le damos al script permisos de ejecución
+
+sudo chmod +x timelapse
+
+--------------- OPCIONAL
+
+# Instalamos servidor ftp para recoger las fotos
+
+sudo apt-get install vsftpd
+
+# Una vez que este descargado abrimos el siguiente archivo de configuración.
+	
+sudo nano /etc/vsftpd.conf
+
+# Descomentamos las siguientes líneas para permitir la escritura de archivos a los usuarios de la Raspberry Pi.
+
+    local_enable=YES
+    write_enable=YES
+
+# Reiniciamos el servicio
+	
+sudo service vsftpd restart
+
+
+## Servidor web
+ 	
+sudo nano /etc/network/interfaces
+
+auto eth0
+iface eth0 inet static
+address 192.168.0.2
+netmask 255.255.255.0
+gateway 192.168.0.1
+
+# Lo siguiente que haremos será crear el grupo “www-data”.  Para ello ejecutaremos los siguientes comandos:
+	
+sudo groupadd www-data
+sudo usermod -a -G www-data www-data
+
+# Actualizaremos los repositorios y los programas de nuestra raspberry.
+
+sudo apt-get update sudo apt-get upgrade
+	
+sudo apt-get update
+sudo apt-get upgrade
+
+# Instalación de Apache:
+
+sudo apt-get install apache2
+
+------------------
+
+## Capturar imágenes
+
+# http://www.youtube.com/watch?v=2oxHt0BLtOU
+
+raspistill -o timelapse1_%05d.jpg -ISO 50 -ex auto -tl 20000 -t 99999999 -q 85 -awb sun -mm matrix -w 1280 -h 720 -e jpg -p 0,0,1280,600 -v
+
+# Captura imágenes cada 5s durante 1000s
+
+raspistill -o timelapse%04d.jpg -t 1000000 -tl 5000
+
+# Captura imágenes cada 3s mientras 1
+
+raspistill -o ts%04d.jpng -t 0 -tl 3000
+
+# Lista las imágenes y vuelca el resultado en un txt, a continuación convierte las imágenes en un video de 24fps
+
+ls *.jpg > files.txt
+mencoder -nosound -ovc lavc -lavcopts vcodec=mpeg4:aspect=16/9:vbitrate=8000000 -vf scale=1920:1080 -o tlcam.avi -mf type=jpeg:fps=24 mf://@files.txt
+
+## Convertir en video
+
+# Very fast but does not create index so if you want to edit with a non linear editor do not choose this.
+
+mencoder -nosound -noskip -oac copy -ovc copy -o output0.avi -mf fps=15 'mf://@files.txt' 
+
+# Fast, it will create index, but it will re-compress the JPG files so some loss of quality will occur (insignificant, so you can safely bet on this) 
+
+mencoder -idx -nosound -noskip -ovc lavc -lavcopts vcodec=mjpeg -o output1.avi -mf fps=15 'mf://@files.txt'
+
+# Slow, it will create index, it will re-compress the JPG file but with the highest quality options to provide lossless results (the final file will be larger than the total of the original files, but if you are a quality freak, then go for this one)
+
+mencoder -idx -nosound -noskip -ovc lavc -lavcopts vcodec=ljpeg -o output2.avi -mf fps=15 'mf://@files.txt'
