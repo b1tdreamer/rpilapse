@@ -2,7 +2,7 @@
 #
 # rpiLapse.py
 #
-# Created by Fernando Fernández on 17/08/2014, Creative Commons 2014.
+# Modified by b1tdreamer on 17/08/2014 under a Creative Commons License.
 #
 # This pythin script captures images from Raspberry Pi camera,
 # and stores them in the /home/pi/timelapses/ folder.
